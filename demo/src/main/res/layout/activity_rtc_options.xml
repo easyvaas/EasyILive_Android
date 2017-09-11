@@ -1,0 +1,135 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/color_grey_bkg"
+    android:layout_centerVertical="true"
+    android:orientation="vertical">
+
+    <RelativeLayout
+        android:id="@+id/role_ll"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingTop="10dp"
+        android:paddingLeft="28dp"
+        android:paddingRight="15dp"
+        android:visibility="gone">
+
+        <TextView
+            android:id="@+id/select_role_tv"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/select_rtc_resolution"
+            android:textSize="@dimen/text_size_title_h2"/>
+
+        <RadioGroup
+            android:id="@+id/role_group"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@id/select_role_tv"
+            android:orientation="horizontal">
+
+            <RadioButton
+                android:id="@+id/radiobutton_master"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:checked="true"
+                android:text="@string/role_master" />
+
+            <RadioButton
+                android:id="@+id/radiobutton_live_guest"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:checked="false"
+                android:text="@string/role_live_guest" />
+
+            <RadioButton
+                android:id="@+id/radiobutton_guest"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:checked="false"
+                android:text="@string/role_guest" />
+        </RadioGroup>
+    </RelativeLayout>
+
+    <RelativeLayout
+        android:id="@+id/rtc_resolution_ll"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingTop="10dp"
+        android:paddingLeft="28dp"
+        android:paddingRight="15dp">
+
+        <TextView
+            android:id="@+id/select_rtc_resolution_tv"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/select_rtc_resolution"
+            android:textSize="@dimen/text_size_title_h2"/>
+
+        <RadioGroup
+            android:id="@+id/rtc_resolution_group"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@id/select_rtc_resolution_tv"
+            android:orientation="vertical">
+
+            <RadioButton
+                android:id="@+id/radiobutton_hd"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:checked="true"
+                android:text="@string/rtc_resolution_hd" />
+
+            <RadioButton
+                android:id="@+id/radiobutton_sd"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:checked="false"
+                android:text="@string/rtc_resolution_sd" />
+
+            <RadioButton
+                android:id="@+id/radiobutton_ld"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:checked="false"
+                android:text="@string/rtc_resolution_ld" />
+        </RadioGroup>
+    </RelativeLayout>
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/pls_input_channel"
+        android:layout_marginTop="15dp"
+        android:paddingLeft="28dp"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:visibility="gone"/>
+
+    <EditText
+        android:id="@+id/channel_id_et"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="@string/input_channel_id_master"
+        android:layout_marginTop="15dp"
+        android:paddingLeft="28dp"
+        android:singleLine="true"
+        android:textSize="18sp"
+        android:visibility="gone"/>
+
+    <RelativeLayout
+        android:id="@+id/rtc_start_ll"
+        android:visibility="gone"
+        style="@style/item_user_info">
+
+        <Button
+            android:id="@+id/rtc_start_btn"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:text="@string/start_rtc" />
+    </RelativeLayout>
+
+</LinearLayout>
+

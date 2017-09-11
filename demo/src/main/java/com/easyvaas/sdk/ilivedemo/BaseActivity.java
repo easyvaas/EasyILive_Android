@@ -1,0 +1,166 @@
+package com.easyvaas.sdk.ilivedemo;
+
+import android.Manifest;
+import android.content.pm.PackageManager;
+import android.os.Build;
+import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
+import android.support.annotation.NonNull;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
+import android.support.v7.app.AppCompatActivity;
+import android.view.View;
+import android.view.ViewTreeObserver;
+import android.view.Window;
+import android.view.inputmethod.InputMethodManager;
+import android.widget.EditText;
+import android.widget.Toast;
+
+import com.easyvaas.sdk.ilivedemo.utils.Logger;
+
+import java.util.Arrays;
+
+public abstract class BaseActivity extends AppCompatActivity {
+    private final static String TAG = BaseActivity.class.getSimpleName();
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+
+        final View layout = findViewById(Window.ID_ANDROID_CONTENT);
+        ViewTreeObserver vto = layout.getViewTreeObserver();
+        vto.addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
+            @Override
+            public void onGlobalLayout() {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
+                    layout.getViewTreeObserver().removeOnGlobalLayoutListener(this);
+                } else {
+                    layout.getViewTreeObserver().removeGlobalOnLayoutListener(this);
+                }
+                initUIandEvent();
+            }
+        });
+    }
+
+    protected abstract void initUIandEvent();
+
+    protected abstract void deInitUIandEvent();
+
+    @Override
+    protected void onPostCreate(Bundle savedInstanceState) {
+        super.onPostCreate(savedInstanceState);
+
+        new Handler().postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                if (isFinishing()) {
+                    return;
+                }
+
+                boolean checkPermissionResult = checkSelfPermissions();
+
+                if ((Build.VERSION.SDK_INT < Build.VERSION_CODES.M)) {
+                    // so far we do not use OnRequestPermissionsResultCallback
+                }
+            }
+        }, 500);
+    }
+
+    private boolean checkSelfPermissions() {
+        return checkSelfPermission(Manifest.permission.RECORD_AUDIO, Constant.PERMISSION_REQ_ID_RECORD_AUDIO) &&
+                checkSelfPermission(Manifest.permission.CAMERA, Constant.PERMISSION_REQ_ID_CAMERA) &&
+                checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE, Constant.PERMISSION_REQ_ID_WRITE_EXTERNAL_STORAGE);
+    }
+
+    @Override
+    protected void onDestroy() {
+        deInitUIandEvent();
+        super.onDestroy();
+    }
+
+    public final void closeIME(View v) {
+        InputMethodManager mgr = (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
+        mgr.hideSoftInputFromWindow(v.getWindowToken(), 0); // 0 force close IME
+        v.clearFocus();
+    }
+
+    public final void closeIMEWithoutFocus(View v) {
+        InputMethodManager mgr = (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
+        mgr.hideSoftInputFromWindow(v.getWindowToken(), 0); // 0 force close IME
+    }
+
+    public void openIME(final EditText v) {
+        final boolean focus = v.requestFocus();
+        if (v.hasFocus()) {
+            final Handler handler = new Handler(Looper.getMainLooper());
+            handler.post(new Runnable() {
+                @Override
+                public void run() {
+                    InputMethodManager mgr = (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
+                    boolean result = mgr.showSoftInput(v, InputMethodManager.SHOW_FORCED);
+                    Logger.d(TAG, "openIME " + focus + " " + result);
+                }
+            });
+        }
+    }
+
+    public boolean checkSelfPermission(String permission, int requestCode) {
+        Logger.d(TAG, "checkSelfPermission " + permission + " " + requestCode);
+        if (ContextCompat.checkSelfPermission(this,
+                permission)
+                != PackageManager.PERMISSION_GRANTED) {
+
+            ActivityCompat.requestPermissions(this,
+                    new String[]{permission},
+                    requestCode);
+            return false;
+        }
+
+        return true;
+    }
+
+    public final void showLongToast(final String msg) {
+        this.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                Toast.makeText(getApplicationContext(), msg, Toast.LENGTH_LONG).show();
+            }
+        });
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode,
+                                           @NonNull String permissions[], @NonNull int[] grantResults) {
+        Logger.d(TAG, "onRequestPermissionsResult " + requestCode + " "
+                + Arrays.toString(permissions) + " " + Arrays.toString(grantResults));
+        switch (requestCode) {
+            case Constant.PERMISSION_REQ_ID_RECORD_AUDIO: {
+                if (grantResults.length > 0
+                        && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    checkSelfPermission(Manifest.permission.CAMERA, Constant.PERMISSION_REQ_ID_CAMERA);
+                } else {
+                    finish();
+                }
+                break;
+            }
+            case Constant.PERMISSION_REQ_ID_CAMERA: {
+                if (grantResults.length > 0
+                        && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE, Constant.PERMISSION_REQ_ID_WRITE_EXTERNAL_STORAGE);
+                } else {
+                    finish();
+                }
+                break;
+            }
+            case Constant.PERMISSION_REQ_ID_WRITE_EXTERNAL_STORAGE: {
+                if (grantResults.length > 0
+                        && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                } else {
+                    finish();
+                }
+                break;
+            }
+        }
+    }
+}
