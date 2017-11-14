@@ -16,6 +16,8 @@ public class EVApplication extends ZApplication {
     private final static String SECRET_KEY = "";
     private final static String USER_ID = "";
 
+    
+
     private static EVApplication app;
 
     @Override public void onCreate() {

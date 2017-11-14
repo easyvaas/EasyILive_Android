@@ -1,15 +1,15 @@
 apply plugin: 'com.android.application'
 
 android {
-    compileSdkVersion 23
-    buildToolsVersion "23.0.2"
+    compileSdkVersion 26
+    buildToolsVersion "26.0.2"
 
     defaultConfig {
         applicationId "com.easyvaas.sdk.ilivedemo"
         minSdkVersion 16
-        targetSdkVersion 21
-        versionCode 5
-        versionName "1.0.4"
+        targetSdkVersion 26
+        versionCode 8
+        versionName "1.0.7"
     }
 
     sourceSets {
@@ -46,9 +46,9 @@ repositories {
 dependencies {
     compile fileTree(include: ['*.jar'], dir: 'libs')
     compile 'com.easyvaas.sdk:evplayer:1.1.5'
-    compile 'com.android.support:appcompat-v7:23.4.0'
-    compile 'com.android.support:design:23.4.0'
+    compile 'com.android.support:appcompat-v7:26.0.0-alpha1'
+    compile 'com.android.support:design:26.0.0-alpha1'
     compile 'cn.yipianfengye.android:zxing-library:2.1'
-    compile 'com.easyvaas.sdk:evilive:1.0.5'
+    compile 'com.easyvaas.sdk:evilive:1.0.7'
 }
 

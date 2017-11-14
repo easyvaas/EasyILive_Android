@@ -31,6 +31,7 @@ public class SmallVideoViewAdapter extends VideoViewAdapter {
         View v = mInflater.inflate(R.layout.small_video_view_container, parent, false);
         v.getLayoutParams().width = mItemWidth;
         v.getLayoutParams().height = mItemHeight;
+        //Log.e("simonwLog", "mItemWidth:" + mItemWidth + ",mItemHeight:" + mItemHeight);
         return new SmallVideoUserStatusHolder(v);
     }
 
@@ -83,7 +84,7 @@ public class SmallVideoViewAdapter extends VideoViewAdapter {
             DisplayMetrics outMetrics = new DisplayMetrics();
             windowManager.getDefaultDisplay().getMetrics(outMetrics);
             //int outWidth = outMetrics.widthPixels - (mLineNum - 1)*mSpace;
-            int outHeight = outMetrics.heightPixels - (mLineNum - 1)*mSpace;
+            int outHeight = outMetrics.heightPixels - (mLineNum - 1) * mSpace;
             //mItemWidth = outWidth / mLineNum;
             mItemHeight = outHeight / mLineNum;
             mItemWidth = mItemHeight * 16 / 9;

@@ -21,12 +21,14 @@ import android.view.MenuItem;
 import android.view.SurfaceView;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.ViewParent;
 import android.view.ViewStub;
 import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.EditText;
+import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.PopupWindow;
 import android.widget.RelativeLayout;
@@ -49,6 +51,7 @@ import com.uuzuche.lib_zxing.activity.CodeUtils;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 
 import tv.danmaku.ijk.media.player.IMediaPlayer;
@@ -67,6 +70,12 @@ public class PlayerActivity extends BaseActivity implements View.OnClickListener
     protected TextView mUserIdTv;
     protected View mTopInfoAreaView;
 
+    private CheckBox cameraSwitchCb;
+    private CheckBox muteCb;
+    private CheckBox audioOnlyCb;
+    private ImageView shareIv;
+    private CheckBox lianmai;
+
     private View mOptionsView;
 
     private PowerManager.WakeLock mWakeLock;
@@ -81,10 +90,11 @@ public class PlayerActivity extends BaseActivity implements View.OnClickListener
     private String mChannelID;
 
     //本地大窗口view
-    private GridVideoViewContainer mGridVideoViewContainer;
+    /*private GridVideoViewContainer mGridVideoViewContainer;*/
+    private FrameLayout mFrameVideoViewContainer;
 
     private RelativeLayout mSmallVideoViewDock;
-    private final HashMap<Integer, SurfaceView> mUidsList = new HashMap<>();
+    private final LinkedHashMap<Integer, SurfaceView> mUidsList = new LinkedHashMap<>();
 
     private Dialog mConfirmStopDialog;
 
@@ -130,10 +140,12 @@ public class PlayerActivity extends BaseActivity implements View.OnClickListener
 
             mOptionsView = findViewById(R.id.rtc_options_left_ll);
             mVideoView = (EVVideoView) findViewById(R.id.player_surface_view);
-            CheckBox cameraSwitchCb = (CheckBox)mOptionsView.findViewById(R.id.live_switch_camera_cb);
-            CheckBox muteCb = (CheckBox)mOptionsView.findViewById(R.id.live_mute_cb);
-            CheckBox audioOnlyCb = (CheckBox)mOptionsView.findViewById(R.id.live_audio_only_cb);
-            ImageView shareIv = (ImageView) mOptionsView.findViewById(R.id.live_share_iv);
+            cameraSwitchCb = (CheckBox) mOptionsView.findViewById(R.id.live_switch_camera_cb);
+            muteCb = (CheckBox) mOptionsView.findViewById(R.id.live_mute_cb);
+            audioOnlyCb = (CheckBox) mOptionsView.findViewById(R.id.live_audio_only_cb);
+            shareIv = (ImageView) mOptionsView.findViewById(R.id.live_share_iv);
+            lianmai = (CheckBox) findViewById(R.id.interactive_live_cb);
+            lianmai.setOnCheckedChangeListener(mOnCheckedChangeListener);
             findViewById(R.id.live_close_iv).setOnClickListener(this);
 
             if (mRole == RtcConstants.RTC_ROLE_GUEST) {
@@ -142,6 +154,7 @@ public class PlayerActivity extends BaseActivity implements View.OnClickListener
                 initEVPlayer();
                 startPlay();
             } else {
+                lianmai.setVisibility(View.GONE);
                 //主播或连麦观众
                 broadcasterUIAndEvent(muteCb, cameraSwitchCb, audioOnlyCb, shareIv);
                 if (mRole == RtcConstants.RTC_ROLE_MASTER) {
@@ -275,15 +288,16 @@ public class PlayerActivity extends BaseActivity implements View.OnClickListener
         audioOnlyCb.setOnCheckedChangeListener(mOnCheckedChangeListener);
         shareIv.setOnClickListener(this);
 
-        mGridVideoViewContainer = (GridVideoViewContainer) findViewById(R.id.grid_video_view_container);
+        /*mGridVideoViewContainer = (GridVideoViewContainer) findViewById(R.id.grid_video_view_container);
         mGridVideoViewContainer.setItemEventHandler(new VideoViewEventListener() {
             @Override
             public void onItemDoubleClick(View v, Object item) {
                 //处理双击小窗口改变布局的逻辑
             }
-        });
+        });*/
+        mFrameVideoViewContainer = (FrameLayout) findViewById(R.id.frame_video_view_container);
 
-        mVideoView.setVisibility(View.GONE);
+        mVideoView.setLayoutParams(new RelativeLayout.LayoutParams(1, 1));
     }
 
     private void initEVPlayer() {
@@ -396,15 +410,32 @@ public class PlayerActivity extends BaseActivity implements View.OnClickListener
     };
 
     private void startInteractive() {
+        /*mEVPlayer.stopPlay();
+        mVideoView.setVisibility(View.GONE);*/
         mEVPlayer.stopPlay();
-        mVideoView.setVisibility(View.GONE);
+        mRole = RtcConstants.RTC_ROLE_LIVE_GUEST;
+        broadcasterUIAndEvent(muteCb, cameraSwitchCb, audioOnlyCb, shareIv);
+        startRtc(mRtcOption.getUid(), mRtcOption.getChannelID());
+        if (mSmallRecycler != null) {
+            mSmallRecycler.setLayoutParams(new RelativeLayout.LayoutParams(mDisplayWidth, mDisplayHeight));
+        }
     }
 
     private void stopInteractive() {
-        mVideoView.setVisibility(View.VISIBLE);
+        /*mVideoView.setVisibility(View.VISIBLE);
         mEVPlayer.onCreate();
-
+        startPlay();*/
+        mEVPlayer.onCreate();
         startPlay();
+        mRole = RtcConstants.RTC_ROLE_GUEST;
+        guestUIAndEvent(muteCb, cameraSwitchCb, audioOnlyCb, shareIv);
+        mFrameVideoViewContainer.removeAllViews();
+        mEVRtc.leaveChannel(mChannelID);
+        mUidsList.clear();
+        mSmallVideoViewAdapter.customizedInit(new HashMap<Integer, SurfaceView>(0), true);
+        mSmallRecycler.setLayoutParams(new RelativeLayout.LayoutParams(0, 0));
+        mVideoView.setLayoutParams(new RelativeLayout.LayoutParams(mDisplayWidth, mDisplayHeight));
+        mUserIdTv.setText("身份: 观众");
     }
 
     private void onInteractiveStart() {
@@ -416,7 +447,8 @@ public class PlayerActivity extends BaseActivity implements View.OnClickListener
     }
 
     private EVPlayerBase.OnPreparedListener mOnPreparedListener = new EVPlayerBase.OnPreparedListener() {
-        @Override public boolean onPrepared() {
+        @Override
+        public boolean onPrepared() {
             runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
@@ -429,7 +461,8 @@ public class PlayerActivity extends BaseActivity implements View.OnClickListener
     };
 
     private EVPlayerBase.OnCompletionListener mOnCompletionListener = new EVPlayerBase.OnCompletionListener() {
-        @Override public boolean onCompletion() {
+        @Override
+        public boolean onCompletion() {
             runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
@@ -453,7 +486,8 @@ public class PlayerActivity extends BaseActivity implements View.OnClickListener
     };
 
     private EVPlayerBase.OnInfoListener mOnInfoListener = new EVPlayerBase.OnInfoListener() {
-        @Override public boolean onInfo(int what, final int extra) {
+        @Override
+        public boolean onInfo(int what, final int extra) {
             switch (what) {
                 case IMediaPlayer.MEDIA_INFO_BUFFERING_START:
                     runOnUiThread(new Runnable() {
@@ -492,7 +526,8 @@ public class PlayerActivity extends BaseActivity implements View.OnClickListener
     };
 
     private EVPlayerBase.OnErrorListener mOnErrorListener = new EVPlayerBase.OnErrorListener() {
-        @Override public boolean onError(int what, int extra) {
+        @Override
+        public boolean onError(int what, int extra) {
             switch (what) {
                 case PlayerConstants.EV_PLAYER_ERROR_SDK_INIT:
                     showToastOnUiThread(R.string.msg_sdk_init_error);
@@ -737,13 +772,13 @@ public class PlayerActivity extends BaseActivity implements View.OnClickListener
         EditText urlEt;
         Button copyBtn;
         qrCodeImg = (ImageView) contentView.findViewById(R.id.qrcode_image_url);
-        urlEt = (EditText)contentView.findViewById(R.id.live_url_et);
+        urlEt = (EditText) contentView.findViewById(R.id.live_url_et);
         urlEt.setText(url);
-        copyBtn = (Button)contentView.findViewById(R.id.copy_url_btn);
+        copyBtn = (Button) contentView.findViewById(R.id.copy_url_btn);
         copyBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                ClipboardManager cmb = (ClipboardManager)getApplicationContext()
+                ClipboardManager cmb = (ClipboardManager) getApplicationContext()
                         .getSystemService(Context.CLIPBOARD_SERVICE);
                 cmb.setText(url);
                 showInfoToast("分享地址已经复制到剪贴板!");
@@ -782,11 +817,11 @@ public class PlayerActivity extends BaseActivity implements View.OnClickListener
 
         contentView.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
         int popupWidth = contentView.getMeasuredWidth();
-        int popupHeight =  contentView.getMeasuredHeight();
+        int popupHeight = contentView.getMeasuredHeight();
 
         int[] location = new int[2];
         parentView.getLocationOnScreen(location);
-        popupWindow.showAtLocation(parentView, Gravity.NO_GRAVITY, (location[0]+parentView.getWidth()/2)-popupWidth/2,
+        popupWindow.showAtLocation(parentView, Gravity.NO_GRAVITY, (location[0] + parentView.getWidth() / 2) - popupWidth / 2,
                 location[1] + popupHeight / 4);
     }
 
@@ -868,12 +903,12 @@ public class PlayerActivity extends BaseActivity implements View.OnClickListener
 
         @Override
         public int getDuration() {
-            return mVideoView != null ? (int)mVideoView.getDuration() : 0;
+            return mVideoView != null ? (int) mVideoView.getDuration() : 0;
         }
 
         @Override
         public int getCurrentPosition() {
-            return mVideoView != null ? (int)mVideoView.getCurrentPosition() : 0;
+            return mVideoView != null ? (int) mVideoView.getCurrentPosition() : 0;
         }
 
         @Override
@@ -979,21 +1014,32 @@ public class PlayerActivity extends BaseActivity implements View.OnClickListener
         mShareUrl = url;
     }
 
+    private SurfaceView localView;
+    //private long localUid;
+
     @Override
     public void onAuthSuccess(String channel, long masterId, long uid) {
         //连麦鉴权成功,开启本地大窗口视频预览
-        mMasterId = masterId;
+        if (masterId == 0) {
+            mMasterId = uid;
+        } else {
+            mMasterId = masterId;
+        }
+        localUid = Long.valueOf(uid).intValue();
+        bigScreenUid = Long.valueOf(uid).intValue();
+        //previewAtSmallPosUid = Long.valueOf(masterId).intValue();
         Logger.d(TAG, "user auth success, channel: " + channel + ", owner id: " + masterId);
 
         if (mEVRtc != null) {
-            SurfaceView localView = mEVRtc.createRendererView(getApplicationContext());
+            localView = mEVRtc.createRendererView(getApplicationContext());
             mEVRtc.setupLocalView(localView, Long.valueOf(uid).intValue());
-            localView.setZOrderOnTop(true);
-            localView.setZOrderMediaOverlay(true);
+            localView.setZOrderOnTop(false);
+            localView.setZOrderMediaOverlay(false);
             localView.getHolder().setFormat(PixelFormat.TRANSPARENT);
 
-            mUidsList.put(0, localView); // get first surface view
-            mGridVideoViewContainer.initViewContainer(getApplicationContext(), 0, mUidsList); // first is now full view
+            mUidsList.put(Long.valueOf(uid).intValue(), localView); // get first surface view
+            /*mGridVideoViewContainer.initViewContainer(getApplicationContext(), 0, mUidsList); // first is now full view*/
+            mFrameVideoViewContainer.addView(localView, new FrameLayout.LayoutParams(mDisplayWidth, mDisplayHeight));
 
             mEVRtc.startPreview(true, localView, Long.valueOf(uid).intValue());
         }
@@ -1025,7 +1071,7 @@ public class PlayerActivity extends BaseActivity implements View.OnClickListener
 
                     //调整合图布局
                     if (mRole == RtcConstants.RTC_ROLE_MASTER) {
-                        updateCompositingLayout(mUidsList);
+                        updateCompositingLayout(mUidsList, bigScreenUid);
                     }
                 }
 
@@ -1035,11 +1081,11 @@ public class PlayerActivity extends BaseActivity implements View.OnClickListener
     }
 
     private void addOverlapVideoView() {
-        HashMap<Integer, SurfaceView> slice = new HashMap<>(1);
+        /*HashMap<Integer, SurfaceView> slice = new HashMap<>(1);
         slice.put(0, mUidsList.get(0));
-        mGridVideoViewContainer.initViewContainer(getApplicationContext(), 0, slice);
+        mGridVideoViewContainer.initViewContainer(getApplicationContext(), 0, slice);*/
 
-        bindToSmallVideoView(0, MAX_LINE_NUM, GRID_ITEM_SPACE);
+        bindToSmallVideoView(bigScreenUid, MAX_LINE_NUM, GRID_ITEM_SPACE);
     }
 
     private void removeRemoteView(final int uid) {
@@ -1049,27 +1095,28 @@ public class PlayerActivity extends BaseActivity implements View.OnClickListener
                 if (isFinishing()) {
                     return;
                 }
-
-                mUidsList.remove(uid);
-
-                int bigBgUid = -1;
+                /*int bigBgUid = -1;
                 if (mSmallVideoViewAdapter != null) {
                     bigBgUid = mSmallVideoViewAdapter.getExceptedUid();
                 }
-
-                Logger.d(TAG, "doRemoveRemoteUi " + (uid & 0xFFFFFFFFL) + " " + (bigBgUid & 0xFFFFFFFFL));
-
+                Logger.d(TAG, "doRemoveRemoteUi " + (uid & 0xFFFFFFFFL) + " " + (bigBgUid & 0xFFFFFFFFL));*/
                 //调整合图布局
-                if (mRole == RtcConstants.RTC_ROLE_MASTER) {
-                    updateCompositingLayout(mUidsList);
+                //if (mRole == RtcConstants.RTC_ROLE_MASTER) {
+                if (uid == bigScreenUid) {
+                    toggleBigAndSmall(new VideoStatusData(localUid, mUidsList.get(localUid),
+                            VideoStatusData.DEFAULT_STATUS, VideoStatusData.DEFAULT_VOLUME));
+                    mUidsList.remove(uid);
+                    updateCompositingLayout(mUidsList, localUid);
+                } else {
+                    mUidsList.remove(uid);
+                    updateCompositingLayout(mUidsList, bigScreenUid);
                 }
-
                 addOverlapVideoView();
             }
         });
     }
 
-    private void updateCompositingLayout(HashMap<Integer, SurfaceView> uids) {
+    private void updateCompositingLayout(HashMap<Integer, SurfaceView> uids, int bigScrennUid) {
         double smallViewHeight = (mDisplayHeight - (MAX_LINE_NUM - 1) * GRID_ITEM_SPACE) / MAX_LINE_NUM;
         double smallViewWidth = smallViewHeight * 16 / 9;
 
@@ -1081,7 +1128,7 @@ public class PlayerActivity extends BaseActivity implements View.OnClickListener
         for (HashMap.Entry<Integer, SurfaceView> entry : uids.entrySet()) {
             int uid = entry.getKey();
 
-            if (uid == 0) {
+            if (uid == bigScrennUid) {
                 EVLayoutRegion region = new EVLayoutRegion();
                 region.setUid(mCurrentId);
                 region.setMaster(true);
@@ -1100,7 +1147,7 @@ public class PlayerActivity extends BaseActivity implements View.OnClickListener
         for (int i = 0; i < usersize; i++) {
             int column = i / MAX_LINE_NUM;
             int row = i % MAX_LINE_NUM;
-            double xpos = (mDisplayWidth - (smallViewWidth * (column+1)) - column * GRID_ITEM_SPACE) / mDisplayWidth;
+            double xpos = (mDisplayWidth - (smallViewWidth * (column + 1)) - column * GRID_ITEM_SPACE) / mDisplayWidth;
             double ypos = (row * (smallViewHeight + GRID_ITEM_SPACE)) / mDisplayHeight;
             EVLayoutRegion region = new EVLayoutRegion();
 
@@ -1119,40 +1166,122 @@ public class PlayerActivity extends BaseActivity implements View.OnClickListener
         }
     }
 
+    private RecyclerView mSmallRecycler;
+    private boolean isPreviewInMainscreen = true;
+    private int bigScreenUid;
+    private int localUid;
+
+    private void toggleBigAndSmall(VideoStatusData item) {
+        if (mEVRtc != null) {
+            SurfaceView oldBig = (SurfaceView) mFrameVideoViewContainer.getChildAt(0);
+            oldBig.setZOrderOnTop(true);
+            oldBig.setZOrderMediaOverlay(true);
+            mFrameVideoViewContainer.removeAllViews();
+            SurfaceView oldSmall = item.mView;
+            ViewParent parent = oldSmall.getParent();
+            if (parent != null) {
+                ((FrameLayout) parent).removeView(oldSmall);
+            }
+            oldSmall.setZOrderOnTop(false);
+            oldSmall.setZOrderMediaOverlay(false);
+            mFrameVideoViewContainer.addView(oldSmall, new FrameLayout.LayoutParams(mDisplayWidth, mDisplayHeight));
+            if (mRole == RtcConstants.RTC_ROLE_MASTER) {
+                if (isPreviewInMainscreen) {
+                    mUidsList.put(bigScreenUid, oldBig);
+                    mUidsList.put(item.mUid, oldSmall);
+                    mUserIdTv.setText("用户id: " + (item.mUid & 0xffffffffL) + ", 身份: 连麦观众");
+                    mEVRtc.setupRemoteView(oldSmall, item.mUid);
+                    mEVRtc.setupLocalView(oldBig, Long.valueOf(bigScreenUid).intValue());
+                    mEVRtc.startPreview(true, oldBig, Long.valueOf(bigScreenUid).intValue());
+                    isPreviewInMainscreen = false;
+                } else if (item.mUid == mMasterId) {
+                    mUidsList.put(bigScreenUid, oldBig);
+                    mUidsList.put(item.mUid, oldSmall);
+                    mUserIdTv.setText("用户id: " + mMasterId + ", 身份: 主播");
+                    mEVRtc.setupRemoteView(oldBig, bigScreenUid);
+                    mEVRtc.setupLocalView(oldSmall, item.mUid);
+                    mEVRtc.startPreview(true, oldSmall, item.mUid);
+                    isPreviewInMainscreen = true;
+                } else {
+                    mUidsList.put(bigScreenUid, oldBig);
+                    mUidsList.put(item.mUid, oldSmall);
+                    mUserIdTv.setText("用户id: " + (item.mUid & 0xffffffffL) + ", 身份: 连麦观众");
+                    mEVRtc.setupRemoteView(oldBig, bigScreenUid);
+                    mEVRtc.setupRemoteView(oldSmall, item.mUid);
+                }
+            } else if (mRole == RtcConstants.RTC_ROLE_LIVE_GUEST) {
+                if (isPreviewInMainscreen) {
+                    mUidsList.put(bigScreenUid, oldBig);
+                    mUidsList.put(item.mUid, oldSmall);
+                    if (item.mUid == mMasterId) {
+                        mUserIdTv.setText("用户id: " + mMasterId + ", 身份: 主播");
+                    } else {
+                        mUserIdTv.setText("用户id: " + (item.mUid & 0xffffffffL) + ", 身份: 连麦观众");
+                    }
+                    mEVRtc.setupRemoteView(oldSmall, item.mUid);
+                    mEVRtc.setupLocalView(oldBig, bigScreenUid);
+                    mEVRtc.startPreview(true, oldBig, bigScreenUid);
+                    isPreviewInMainscreen = false;
+                } else if (item.mUid == localUid) {
+                    mUidsList.put(bigScreenUid, oldBig);
+                    mUidsList.put(item.mUid, oldSmall);
+                    mUserIdTv.setText("用户id: " + (item.mUid & 0xffffffffL) + ", 身份: 连麦观众");
+                    mEVRtc.setupRemoteView(oldBig, Long.valueOf(bigScreenUid).intValue());
+                    mEVRtc.setupLocalView(oldSmall, item.mUid);
+                    mEVRtc.startPreview(true, oldSmall, item.mUid);
+                    isPreviewInMainscreen = true;
+                } else {
+                    mUidsList.put(bigScreenUid, oldBig);
+                    mUidsList.put(item.mUid, oldSmall);
+                    if (item.mUid == mMasterId) {
+                        mUserIdTv.setText("用户id: " + mMasterId + ", 身份: 主播");
+                    } else {
+                        mUserIdTv.setText("用户id: " + (item.mUid & 0xffffffffL) + ", 身份: 连麦观众");
+                    }
+                    mEVRtc.setupRemoteView(oldBig, bigScreenUid);
+                    mEVRtc.setupRemoteView(oldSmall, item.mUid);
+                }
+            }
+            updateCompositingLayout(mUidsList, item.mUid);
+            bindToSmallVideoView(item.mUid, MAX_LINE_NUM, GRID_ITEM_SPACE);
+            bigScreenUid = item.mUid;
+        }
+    }
+
     private void bindToSmallVideoView(int exceptUid, int lineNum, int space) {
         if (mSmallVideoViewDock == null) {
             ViewStub stub = (ViewStub) findViewById(R.id.small_video_view_dock);
             mSmallVideoViewDock = (RelativeLayout) stub.inflate();
         }
 
-        RecyclerView recycler = (RecyclerView) findViewById(R.id.small_video_view_container);
+        mSmallRecycler = (RecyclerView) findViewById(R.id.small_video_view_container);
 
         boolean create = false;
 
         if (mSmallVideoViewAdapter == null) {
             create = true;
-            mSmallVideoViewAdapter = new SmallVideoViewAdapter(this, exceptUid, (int)mMasterId, mUidsList, lineNum,
+            mSmallVideoViewAdapter = new SmallVideoViewAdapter(this, exceptUid, (int) mMasterId, mUidsList, lineNum,
                     space, new VideoViewEventListener() {
                 @Override
                 public void onItemDoubleClick(View v, Object item) {
-                    //switchToDefaultVideoView();
+                    toggleBigAndSmall((VideoStatusData) item);
                 }
             });
             mSmallVideoViewAdapter.setHasStableIds(true);
+            mSmallRecycler.addItemDecoration(new SpaceItemDecoration(space, lineNum, GridLayoutManager.HORIZONTAL));
         }
-        recycler.setHasFixedSize(true);
+        mSmallRecycler.setHasFixedSize(true);
 
-        recycler.setLayoutManager(new GridLayoutManager(this, lineNum, GridLayoutManager.HORIZONTAL, true));
-        recycler.setAdapter(mSmallVideoViewAdapter);
+        mSmallRecycler.setLayoutManager(new GridLayoutManager(this, lineNum, GridLayoutManager.HORIZONTAL, true));
+        mSmallRecycler.setAdapter(mSmallVideoViewAdapter);
 
-        recycler.setDrawingCacheEnabled(true);
-        recycler.setDrawingCacheQuality(View.DRAWING_CACHE_QUALITY_AUTO);
-        recycler.addItemDecoration(new SpaceItemDecoration(space, lineNum, GridLayoutManager.HORIZONTAL));
+        mSmallRecycler.setDrawingCacheEnabled(true);
+        mSmallRecycler.setDrawingCacheQuality(View.DRAWING_CACHE_QUALITY_AUTO);
 
         if (!create) {
             mSmallVideoViewAdapter.notifyUiChanged(mUidsList, exceptUid, null, null);
         }
-        recycler.setVisibility(View.VISIBLE);
+        mSmallRecycler.setVisibility(View.VISIBLE);
         mSmallVideoViewDock.setVisibility(View.VISIBLE);
     }
 }
