@@ -177,6 +177,7 @@ public class PlayerActivity extends BaseActivity implements View.OnClickListener
         }
 
         mUidsList.clear();
+        System.gc();
     }
 
     @Override
@@ -1194,7 +1195,7 @@ public class PlayerActivity extends BaseActivity implements View.OnClickListener
                     mEVRtc.setupLocalView(oldBig, Long.valueOf(bigScreenUid).intValue());
                     mEVRtc.startPreview(true, oldBig, Long.valueOf(bigScreenUid).intValue());
                     isPreviewInMainscreen = false;
-                } else if (item.mUid == mMasterId) {
+                } else if ((item.mUid & 0xffffffffL) == mMasterId) {
                     mUidsList.put(bigScreenUid, oldBig);
                     mUidsList.put(item.mUid, oldSmall);
                     mUserIdTv.setText("用户id: " + mMasterId + ", 身份: 主播");
