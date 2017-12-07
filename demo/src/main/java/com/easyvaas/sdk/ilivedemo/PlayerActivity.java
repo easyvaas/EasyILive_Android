@@ -103,7 +103,7 @@ public class PlayerActivity extends BaseActivity implements View.OnClickListener
 
     private int mRole;
 
-    private long mMasterId;
+    private int mMasterId;
     private int mCurrentId;
     private int mDisplayWidth;
     private int mDisplayHeight;
@@ -852,7 +852,7 @@ public class PlayerActivity extends BaseActivity implements View.OnClickListener
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                long curId = uid & 0xffffffffL;
+                long curId = uid;
                 mUserIdTv.setVisibility(View.VISIBLE);
                 mUserIdTv.setText("用户id: " + curId + ", 身份: "
                         + (mRole == RtcConstants.RTC_ROLE_MASTER ? "主播" : "连麦观众"));
@@ -968,7 +968,7 @@ public class PlayerActivity extends BaseActivity implements View.OnClickListener
     @Override
     public void onUserOffline(int uid, int reason) {
         //有用户离开，处理界面变化
-        long offUserId = uid & 0xffffffffL;
+        long offUserId = uid;
         if (mMasterId == offUserId) {
             //如果主播退出,给出提示
             showInfoToast(R.string.msg_rtc_master_leave_temp);
@@ -980,7 +980,7 @@ public class PlayerActivity extends BaseActivity implements View.OnClickListener
     @Override
     public void onUserMuteVideo(int uid, boolean muted) {
         //有用户开启/关闭了视频显示
-        long muteId = uid & 0xffffffffL;
+        long muteId = uid;
         int resId = muted ? R.string.msg_rtc_user_mute_video_on
                 : R.string.msg_rtc_user_mute_video_off;
         showInfoToast(getString(resId, muteId + " "));
@@ -989,7 +989,7 @@ public class PlayerActivity extends BaseActivity implements View.OnClickListener
     @Override
     public void onUserMuteAudio(int uid, boolean muted) {
         //有用户开启/关闭了音频传输
-        long muteId = uid & 0xffffffffL;
+        long muteId = uid;
         int resId = muted ? R.string.msg_rtc_user_mute_audio_on
                 : R.string.msg_rtc_user_mute_audio_off;
         showInfoToast(getString(resId, muteId + " "));
@@ -1022,9 +1022,9 @@ public class PlayerActivity extends BaseActivity implements View.OnClickListener
     public void onAuthSuccess(String channel, long masterId, long uid) {
         //连麦鉴权成功,开启本地大窗口视频预览
         if (masterId == 0) {
-            mMasterId = uid;
+            mMasterId = new Long(uid).intValue();
         } else {
-            mMasterId = masterId;
+            mMasterId = new Long(masterId).intValue();
         }
         localUid = Long.valueOf(uid).intValue();
         bigScreenUid = Long.valueOf(uid).intValue();
@@ -1190,12 +1190,12 @@ public class PlayerActivity extends BaseActivity implements View.OnClickListener
                 if (isPreviewInMainscreen) {
                     mUidsList.put(bigScreenUid, oldBig);
                     mUidsList.put(item.mUid, oldSmall);
-                    mUserIdTv.setText("用户id: " + (item.mUid & 0xffffffffL) + ", 身份: 连麦观众");
+                    mUserIdTv.setText("用户id: " + item.mUid + ", 身份: 连麦观众");
                     mEVRtc.setupRemoteView(oldSmall, item.mUid);
                     mEVRtc.setupLocalView(oldBig, Long.valueOf(bigScreenUid).intValue());
                     mEVRtc.startPreview(true, oldBig, Long.valueOf(bigScreenUid).intValue());
                     isPreviewInMainscreen = false;
-                } else if ((item.mUid & 0xffffffffL) == mMasterId) {
+                } else if (item.mUid == mMasterId) {
                     mUidsList.put(bigScreenUid, oldBig);
                     mUidsList.put(item.mUid, oldSmall);
                     mUserIdTv.setText("用户id: " + mMasterId + ", 身份: 主播");
@@ -1206,7 +1206,7 @@ public class PlayerActivity extends BaseActivity implements View.OnClickListener
                 } else {
                     mUidsList.put(bigScreenUid, oldBig);
                     mUidsList.put(item.mUid, oldSmall);
-                    mUserIdTv.setText("用户id: " + (item.mUid & 0xffffffffL) + ", 身份: 连麦观众");
+                    mUserIdTv.setText("用户id: " + item.mUid + ", 身份: 连麦观众");
                     mEVRtc.setupRemoteView(oldBig, bigScreenUid);
                     mEVRtc.setupRemoteView(oldSmall, item.mUid);
                 }
@@ -1217,7 +1217,7 @@ public class PlayerActivity extends BaseActivity implements View.OnClickListener
                     if (item.mUid == mMasterId) {
                         mUserIdTv.setText("用户id: " + mMasterId + ", 身份: 主播");
                     } else {
-                        mUserIdTv.setText("用户id: " + (item.mUid & 0xffffffffL) + ", 身份: 连麦观众");
+                        mUserIdTv.setText("用户id: " + item.mUid + ", 身份: 连麦观众");
                     }
                     mEVRtc.setupRemoteView(oldSmall, item.mUid);
                     mEVRtc.setupLocalView(oldBig, bigScreenUid);
@@ -1226,7 +1226,7 @@ public class PlayerActivity extends BaseActivity implements View.OnClickListener
                 } else if (item.mUid == localUid) {
                     mUidsList.put(bigScreenUid, oldBig);
                     mUidsList.put(item.mUid, oldSmall);
-                    mUserIdTv.setText("用户id: " + (item.mUid & 0xffffffffL) + ", 身份: 连麦观众");
+                    mUserIdTv.setText("用户id: " + item.mUid + ", 身份: 连麦观众");
                     mEVRtc.setupRemoteView(oldBig, Long.valueOf(bigScreenUid).intValue());
                     mEVRtc.setupLocalView(oldSmall, item.mUid);
                     mEVRtc.startPreview(true, oldSmall, item.mUid);
@@ -1237,7 +1237,7 @@ public class PlayerActivity extends BaseActivity implements View.OnClickListener
                     if (item.mUid == mMasterId) {
                         mUserIdTv.setText("用户id: " + mMasterId + ", 身份: 主播");
                     } else {
-                        mUserIdTv.setText("用户id: " + (item.mUid & 0xffffffffL) + ", 身份: 连麦观众");
+                        mUserIdTv.setText("用户id: " + item.mUid  + ", 身份: 连麦观众");
                     }
                     mEVRtc.setupRemoteView(oldBig, bigScreenUid);
                     mEVRtc.setupRemoteView(oldSmall, item.mUid);
